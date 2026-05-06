@@ -923,22 +923,17 @@ function buildHistory(){
 }
 
 // ══════════════════════════════
-// TOP
 // ══════════════════════════════
-const mockTop=[
-  {name:'Аурум Рекс',coins:4820000,emoji:'👑',clan:'Золотые'},
-  {name:'Мидас',coins:2310000,emoji:'🐉',clan:'Дракены'},
-  {name:'Голд Кинг',coins:980000,emoji:'⚔️',clan:'Золотые'},
-  {name:'Монетный двор',coins:412000,emoji:'🏦',clan:null},
-  {name:'Кликер777',coins:190000,emoji:'🎰',clan:'Дракены'},
-];
+// TOP — РЕАЛЬНЫЙ API
+// ══════════════════════════════
 
-const mockClanTop=[
-  {name:'Золотые',members:12,totalCoins:5800000,emoji:'🏆'},
-  {name:'Дракены',members:8,totalCoins:2500000,emoji:'🐉'},
-  {name:'Кузнецы',members:5,totalCoins:870000,emoji:'⚒️'},
-  {name:'Тени',members:3,totalCoins:310000,emoji:'🌑'},
-];
+// ⚠️ ЗАМЕНИ на свой IP или домен когда будешь запускать
+// В Termux: узнай IP командой: ip addr show | grep 'inet '
+// Пример: const API_URL = 'http://192.168.1.100:8000';
+const API_URL = 'http://localhost:8000';
+
+// Аватары для игроков по индексу
+const AVATARS = ['👑','🐉','⚔️','🏆','🎰','💎','🔥','⭐','🦅','🧙'];
 
 function switchTopTab(tab,btn){
   document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
@@ -946,83 +941,102 @@ function switchTopTab(tab,btn){
   btn.classList.add('active');
   document.getElementById('top-'+tab+'-panel').classList.add('active');
   if(tab==='clans') buildClanTop();
+  if(tab==='players') buildTop();
 }
 
-function buildTop(){
+async function buildTop(){
   const list=document.getElementById('top-list');
-  list.innerHTML='';
+  list.innerHTML='<div class="empty-state">⏳ Загрузка...</div>';
 
-  // Только зарегистрированные в боте игроки (у кого есть настоящий Telegram ID)
-  // Мок-данные (mockTop) не показываем — они не зарегистрированы в боте
+  let apiPlayers = [];
+  try {
+    const res = await fetch(API_URL + '/api/top?limit=20');
+    if(res.ok){
+      const data = await res.json();
+      apiPlayers = data.top || [];
+    }
+  } catch(e) {
+    // API недоступен — показываем только текущего игрока
+  }
+
+  // Добавляем текущего игрока если его нет в топе
   const tg = getTgUser();
-  const isRegistered = !!(tg && tg.id);
-
-  // Собираем топ только из реальных пользователей
-  // Текущий игрок добавляется только если он зашёл через Telegram (зарегистрирован в боте)
-  const realTop = [];
-  if(isRegistered){
-    realTop.push({
-      name: S.username || tg.name || ('id'+tg.id),
+  const myId = tg ? tg.id : S.tgId;
+  const alreadyIn = apiPlayers.find(p => p.user_id == myId);
+  if(!alreadyIn && myId){
+    apiPlayers.push({
+      user_id: myId,
+      username: S.username,
       coins: S.totalCoins,
-      emoji: '✨',
-      isMe: true,
-      clan: S.clan ? S.clan.name : null
+      level: 1,
+      isMe: true
     });
   }
 
-  // Если топ пустой — показываем заглушку
-  if(realTop.length === 0){
+  // Помечаем себя
+  apiPlayers = apiPlayers.map(p => ({...p, isMe: p.user_id == myId}));
+  apiPlayers.sort((a,b) => b.coins - a.coins);
+
+  list.innerHTML='';
+  if(!apiPlayers.length){
     list.innerHTML='<div class="empty-state" style="padding:40px 20px;color:var(--muted);font-size:9px;letter-spacing:2px;text-align:center">'+
-      '📊 РЕЙТИНГ ЗАГРУЖАЕТСЯ<br><br>'+
-      '<span style="font-size:8px;opacity:.6">Откройте игру через Telegram-бот,<br>чтобы попасть в топ</span>'+
+      '📊 РЕЙТИНГ ПУСТ<br><br>'+
+      '<span style="font-size:8px;opacity:.6">Стань первым!</span>'+
     '</div>';
     return;
   }
 
-  realTop.sort((a,b)=>b.coins-a.coins);
   const rk=['🥇','🥈','🥉'];
-  realTop.forEach((p,i)=>{
+  apiPlayers.forEach((p,i)=>{
     const el=document.createElement('div');
     el.className='top-entry'+(p.isMe?' me':'');
     const rc=i===0?'rank gold':i===1?'rank silver':i===2?'rank bronze':'rank';
+    const avatar = AVATARS[i % AVATARS.length];
+    const name = p.username || ('id'+p.user_id);
     el.innerHTML=`
       <div class="${rc}">${i<3?rk[i]:i+1}</div>
-      <div class="top-avatar">${p.emoji}</div>
+      <div class="top-avatar">${avatar}</div>
       <div class="top-info">
-        <div class="top-name">${p.name}</div>
-        <div class="top-score">МОНЕТ СОБРАНО${p.clan?` · <span style="color:var(--elite)">${p.clan}</span>`:''}</div>
+        <div class="top-name">${name}${p.isMe?' <span style="font-size:9px;color:#00e5ff">(Вы)</span>':''}</div>
+        <div class="top-score">Ур.${p.level || 1} · МОНЕТ СОБРАНО</div>
       </div>
       <div class="top-coins">${fmt(p.coins)}</div>`;
     list.appendChild(el);
   });
+
+  // Обновляем ранг в профиле
+  if(myId){
+    const myRank = apiPlayers.findIndex(p=>p.isMe)+1;
+    if(myRank > 0) document.getElementById('pstat-rank').textContent='#'+myRank;
+  }
 }
 
 function buildClanTop(){
+  // Кланы пока локальные (можно расширить позже)
   const list=document.getElementById('top-clans-list');
   list.innerHTML='';
-  // Add player's clan if exists and not in mock
-  let clans=[...mockClanTop];
-  if(S.clan&&!clans.find(c=>c.name===S.clan.name)){
+  const clans=[];
+  if(S.clan){
     clans.push({name:S.clan.name,members:1,totalCoins:S.totalCoins,emoji:'⚔️',isMe:true});
   }
-  // If player has clan, boost its coins
-  if(S.clan){
-    const mc=clans.find(c=>c.name===S.clan.name);
-    if(mc&&!mc.isMe) mc.totalCoins+=S.totalCoins;
+  if(!clans.length){
+    list.innerHTML='<div class="empty-state" style="padding:40px 20px;color:var(--muted);font-size:9px;letter-spacing:2px;text-align:center">'+
+      '⚔️ КЛАНОВ НЕТ<br><br>'+
+      '<span style="font-size:8px;opacity:.6">Создайте первый клан!</span>'+
+    '</div>';
+    return;
   }
-  clans.sort((a,b)=>b.totalCoins-a.totalCoins);
   const rk=['🥇','🥈','🥉'];
   clans.forEach((c,i)=>{
-    const isMe=S.clan&&c.name===S.clan.name;
     const el=document.createElement('div');
-    el.className='top-entry clan-entry'+(isMe?' me':'');
+    el.className='top-entry clan-entry'+(c.isMe?' me':'');
     const rc=i===0?'rank gold':i===1?'rank silver':i===2?'rank bronze':'rank';
     el.innerHTML=`
       <div class="${rc}">${i<3?rk[i]:i+1}</div>
       <div class="top-avatar">${c.emoji}</div>
       <div class="top-info">
         <div class="top-name" style="color:var(--elite)">${c.name}</div>
-        <div class="top-score">${c.members} участников${isMe?' · <span style="color:#00e5ff">Ваш клан</span>':''}</div>
+        <div class="top-score">${c.members} участников · <span style="color:#00e5ff">Ваш клан</span></div>
       </div>
       <div class="top-coins" style="color:var(--elite)">${fmt(c.totalCoins)}</div>`;
     list.appendChild(el);
