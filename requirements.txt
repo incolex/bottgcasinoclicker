@@ -1,0 +1,7 @@
+python-telegram-bot[job-queue]==20.7
+python-dotenv
+fastapi
+uvicorn[standard]
+psycopg2-binary
+pydantic
+cryptography>=41.0.0
