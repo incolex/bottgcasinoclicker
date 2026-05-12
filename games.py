@@ -241,7 +241,7 @@ MINES_GRID_SIZE = 25  # 5×5
 def mines_multiplier(mines: int, opened: int) -> float:
     """
     Расчёт множителя на основе вероятности выживания.
-    С house-edge 0.95.
+    House-edge 0.75 (казино забирает 25% — честный баланс).
     """
     if opened == 0:
         return 1.0
@@ -254,7 +254,7 @@ def mines_multiplier(mines: int, opened: int) -> float:
         prob *= (safe - i) / (total - i)
     if prob <= 0:
         return 0.0
-    return round(0.95 / prob, 2)
+    return round(0.75 / prob, 2)
 
 
 def mines_place(mines: int) -> list:
