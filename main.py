@@ -1483,10 +1483,8 @@ async def _do_season_reset(bot):
             }, ensure_ascii=False)
             cur.execute("UPDATE users SET game_balance=0, game_state=%s WHERE user_id=%s", (reset_state, u["user_id"]))
         cur.execute("UPDATE users SET game_balance=0, balance=0, xp=0, level=1 WHERE game_state IS NULL")
-        # Кланы НЕ удаляем, но сбрасываем clan_chest и streak внутри кланов если есть
-        cur.execute("UPDATE clans SET chest_coins=0 WHERE TRUE")
         cur.execute("DELETE FROM transfers")
-        # Сбросить таймер сезона в БД
+        # Сбрасываем таймер сезона в БД
         cur.execute("INSERT INTO settings(key,value) VALUES('season_end_ts','0') ON CONFLICT(key) DO UPDATE SET value='0'")
         conn.commit()
     except Exception as e: conn.rollback();logger.error(f"Season reset err: {e}")
@@ -1959,8 +1957,6 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 }, ensure_ascii=False)
                 cur.execute("UPDATE users SET game_balance=0, game_state=%s WHERE user_id=%s", (reset_st, u["user_id"]))
             cur.execute("UPDATE users SET game_balance=0, balance=0, xp=0, level=1 WHERE game_state IS NULL")
-            # Кланы остаются, но сбрасываем clan_chest
-            cur.execute("UPDATE clans SET chest_coins=0 WHERE TRUE")
             # Очистить историю переводов
             cur.execute("DELETE FROM transfers")
             conn.commit()
