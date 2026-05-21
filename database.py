@@ -108,6 +108,10 @@ def init_db():
         "ALTER TABLE transfers ADD COLUMN IF NOT EXISTS from_id BIGINT",
         "ALTER TABLE transfers ADD COLUMN IF NOT EXISTS to_id BIGINT",
         "ALTER TABLE transfers ADD COLUMN IF NOT EXISTS note TEXT DEFAULT ''",
+        # Расширяем до BIGINT чтобы хранить большие суммы монет
+        "ALTER TABLE users ALTER COLUMN game_balance TYPE BIGINT",
+        "ALTER TABLE users ALTER COLUMN balance TYPE BIGINT",
+        "ALTER TABLE transfers ALTER COLUMN amount TYPE BIGINT",
     ]
 
     for sql in migrations:

@@ -598,8 +598,8 @@ class SaveStateRequest(BaseModel):
     init_data: Optional[str] = None  # FIX #1: поле для Telegram initData
 
 
-_MAX_DELTA_PER_SAVE = 999_999_999_999   # без ограничения
-_MAX_BALANCE       = 999_999_999_999_999  # без ограничения
+_MAX_DELTA_PER_SAVE = 9_000_000_000_000_000_000   # BIGINT safe
+_MAX_BALANCE       = 9_000_000_000_000_000_000   # BIGINT max (~9 quintillion)
 
 
 @app.post("/api/game/save")
