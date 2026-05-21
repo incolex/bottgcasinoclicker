@@ -711,23 +711,39 @@ def save_game_state(req: SaveStateRequest):
             state_to_save["perSecond"] = ps
 
         # FIX алмазов: берём MAX(db, client) — алмазы не пропадают
+        # НО: если сезон сброшен (db=0 и нет апгрейдов) — доверяем БД
         client_diamonds = int(state_to_save.get("diamonds") or 0)
-        if not req.exact:
-            db_diamonds = int(db_state.get("diamonds") or 0)
+        db_diamonds = int(db_state.get("diamonds") or 0)
+        _season_reset = (db_diamonds == 0 and not db_state.get("upgrades") and db_state.get("prestige", 0) == 0 and db_state.get("coins", -1) == 0)
+        if not req.exact and not _season_reset:
             if db_diamonds > client_diamonds:
                 state_to_save["diamonds"] = db_diamonds
+        elif _season_reset:
+            # Сезон сброшен — принудительно обнуляем
+            state_to_save["diamonds"] = 0
+            state_to_save["ownedSkins"] = []
+            state_to_save["ownedBgs"] = []
+            state_to_save["activeSkin"] = "default"
+            state_to_save["activeBg"] = "default"
+            state_to_save["upgrades"] = []
+            state_to_save["prestige"] = 0
+            state_to_save["prestigeMultiplier"] = 1.0
+            state_to_save["claimedAchs"] = {}
+            state_to_save["clickPower"] = 1
+            state_to_save["perSecond"] = 0
 
-        # FIX ownedSkins/ownedBgs: union — купленное не пропадает
-        db_owned_skins = db_state.get("ownedSkins") or []
-        db_owned_bgs = db_state.get("ownedBgs") or []
-        client_owned_skins = state_to_save.get("ownedSkins") or []
-        client_owned_bgs = state_to_save.get("ownedBgs") or []
-        merged_skins = list(set(db_owned_skins) | set(s for s in client_owned_skins if isinstance(s, str)))
-        merged_bgs = list(set(db_owned_bgs) | set(b for b in client_owned_bgs if isinstance(b, str)))
-        if merged_skins:
-            state_to_save["ownedSkins"] = merged_skins
-        if merged_bgs:
-            state_to_save["ownedBgs"] = merged_bgs
+        if not _season_reset:
+            # FIX ownedSkins/ownedBgs: union — купленное не пропадает
+            db_owned_skins = db_state.get("ownedSkins") or []
+            db_owned_bgs = db_state.get("ownedBgs") or []
+            client_owned_skins = state_to_save.get("ownedSkins") or []
+            client_owned_bgs = state_to_save.get("ownedBgs") or []
+            merged_skins = list(set(db_owned_skins) | set(s for s in client_owned_skins if isinstance(s, str)))
+            merged_bgs = list(set(db_owned_bgs) | set(b for b in client_owned_bgs if isinstance(b, str)))
+            if merged_skins:
+                state_to_save["ownedSkins"] = merged_skins
+            if merged_bgs:
+                state_to_save["ownedBgs"] = merged_bgs
 
         # FIX totalClicks: не уменьшаем никогда
         db_total_clicks = int(db_state.get("totalClicks") or 0)
@@ -736,22 +752,24 @@ def save_game_state(req: SaveStateRequest):
             state_to_save["totalClicks"] = db_total_clicks
 
         # FIX ачивок: мержим из БД — не даём затереть уже полученные
-        client_achs = state_to_save.get("claimedAchs") or {}
-        db_achs = db_state.get("claimedAchs") or {}
-        state_to_save["claimedAchs"] = {**client_achs, **db_achs}
+        if not _season_reset:
+            client_achs = state_to_save.get("claimedAchs") or {}
+            db_achs = db_state.get("claimedAchs") or {}
+            state_to_save["claimedAchs"] = {**client_achs, **db_achs}
 
         # FIX престижа: prestige и prestigeMultiplier никогда не уменьшаются
-        db_prestige = int(db_state.get("prestige") or 0)
-        client_prestige = int(state_to_save.get("prestige") or 0)
-        if db_prestige > client_prestige:
-            state_to_save["prestige"] = db_prestige
-            logger.info(f"[PRESTIGE GUARD] uid={req.tg_id} client={client_prestige} restored to db={db_prestige}")
-        actual_prestige = max(db_prestige, client_prestige)
-        db_mult = float(db_state.get("prestigeMultiplier") or 1.0)
-        client_mult = float(state_to_save.get("prestigeMultiplier") or 1.0)
-        correct_mult = round(1 + actual_prestige * 0.15, 4) if actual_prestige > 0 else 1.0
-        # Берём максимум между db, клиентом и пересчитанным значением
-        state_to_save["prestigeMultiplier"] = max(db_mult, client_mult, correct_mult)
+        # НО: если сезон сброшен — обнуляем
+        if not _season_reset:
+            db_prestige = int(db_state.get("prestige") or 0)
+            client_prestige = int(state_to_save.get("prestige") or 0)
+            if db_prestige > client_prestige:
+                state_to_save["prestige"] = db_prestige
+                logger.info(f"[PRESTIGE GUARD] uid={req.tg_id} client={client_prestige} restored to db={db_prestige}")
+            actual_prestige = max(db_prestige, client_prestige)
+            db_mult = float(db_state.get("prestigeMultiplier") or 1.0)
+            client_mult = float(state_to_save.get("prestigeMultiplier") or 1.0)
+            correct_mult = round(1 + actual_prestige * 0.15, 4) if actual_prestige > 0 else 1.0
+            state_to_save["prestigeMultiplier"] = max(db_mult, client_mult, correct_mult)
 
         # Сохраняем state (если обновлялся game_balance через delta — state отдельным запросом)
         cur.execute(
