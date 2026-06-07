@@ -31,7 +31,7 @@
   /* ══ CLICK SCREEN — полноэкранный фиксированный layout ══ */
   #screen-click{overflow:hidden!important;padding:0;align-items:stretch;justify-content:flex-start;gap:0;padding-top:env(safe-area-inset-top,0px)}
 
-  /* Верхняя панель — баланс по центру */
+  /* Верхняя панель — баланс */
   .ck-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px;flex-shrink:0;gap:6px}
   .ck-balance-block{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
   .ck-label{font-size:7px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
@@ -2287,7 +2287,6 @@ function buyUpgrade(id) {
     if (S.coins < us.cost) { showToast('Недостаточно монет', 'err'); return; }
     const cost = us.cost;
     S.coins -= cost;
-    S.totalCoins = Math.max(0, (S.totalCoins || 0) - cost);
     // Корректируем delta: стоимость апгрейда не должна засчитываться как заработок
     _pendingDelta = Math.max(0, _pendingDelta - cost);
   }
@@ -2643,9 +2642,8 @@ function doExchange() {
   if (d < 1)          { showToast('Минимум 500 000 монет', 'err'); return; }
   if (S.coins < amt)  { showToast('Недостаточно монет', 'err'); return; }
   S.coins      -= amt;
-  S.totalCoins  = Math.max(0, (S.totalCoins || 0) - amt);
   S.diamonds   += d;
-  _pendingDelta = Math.max(0, _pendingDelta - amt); // точное списание
+  _pendingDelta = 0; // точное списание
   _saveUpgradeBackup(); // сохранить алмазы локально
   document.getElementById('exchange-amt').value = '';
   updateExchangePreview(); updateUI(); saveNow(true);
@@ -3759,7 +3757,7 @@ async function initGame() {
       if (r.ok) {
         const d    = await r.json();
         const dbBal = parseInt(d.game_balance) || 0;
-        if (dbBal > Math.floor(S.coins) + 100) { S.coins = dbBal; updateUI(); }
+        if (dbBal !== Math.floor(S.coins)) { S.coins = dbBal; updateUI(); }
       }
     } catch(e) {}
   }, 15000);
