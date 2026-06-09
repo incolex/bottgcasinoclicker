@@ -31,16 +31,16 @@
   /* ══ CLICK SCREEN — полноэкранный фиксированный layout ══ */
   #screen-click{overflow:hidden!important;padding:0;align-items:stretch;justify-content:flex-start;gap:0;padding-top:env(safe-area-inset-top,0px)}
 
-  /* Верхняя панель — баланс */
-  .ck-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px;flex-shrink:0;gap:6px}
-  .ck-balance-block{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
-  .ck-label{font-size:7px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
-  .ck-coins{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,5.5vw,28px);font-weight:700;color:var(--gold);text-shadow:0 0 24px rgba(255,215,0,.35);line-height:1;letter-spacing:-1px;white-space:nowrap;overflow:visible}
-  .ck-ps{font-size:9px;color:var(--gold3);letter-spacing:1px;margin-top:2px}
-  .ck-rank-pill{background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.15);border-radius:20px;padding:5px 10px;display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0}
+  /* Верхняя панель — баланс по центру */
+  .ck-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;flex-shrink:0;position:relative}
+  .ck-balance-block{display:flex;flex-direction:column;align-items:center;position:absolute;left:50%;transform:translateX(-50%)}
+  .ck-label{font-size:7px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:1px}
+  .ck-coins{font-family:'Cinzel Decorative',serif;font-size:26px;font-weight:700;color:var(--gold);text-shadow:0 0 24px rgba(255,215,0,.35);line-height:1;letter-spacing:-1px}
+  .ck-ps{font-size:9px;color:var(--gold3);letter-spacing:1px;margin-top:1px}
+  .ck-rank-pill{background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.15);border-radius:20px;padding:5px 12px;display:flex;flex-direction:column;align-items:center;gap:1px}
   .ck-rank-num{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold)}
   .ck-rank-lbl{font-size:6px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
-  .ck-save-btn{background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:14px;color:var(--gold3);font-family:'Cinzel',serif;font-size:9px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .15s;padding:6px 11px;flex-shrink:0;white-space:nowrap}
+  .ck-save-btn{background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:14px;color:var(--gold3);font-family:'Cinzel',serif;font-size:9px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .15s;padding:6px 13px;flex-shrink:0;white-space:nowrap}
   .ck-save-btn:active{opacity:.7}
   .ck-save-btn.saving{border-color:rgba(68,255,153,.4);color:var(--green)}
 
@@ -94,34 +94,42 @@
   @keyframes cb{0%{opacity:.7;transform:scale(0)}100%{opacity:0;transform:scale(3)}}
 
   /* ══ CLICK ANIMATIONS ══ */
-  /* Ripple ring на монете */
-  .coin-ripple{position:absolute;border-radius:50%;border:2px solid rgba(255,215,0,0.7);pointer-events:none;z-index:6;width:170px;height:170px;top:calc(50% - 85px);left:calc(50% - 85px);opacity:0;transform-origin:center center;will-change:opacity,transform}
-  @keyframes coinRipple{0%{opacity:0.85;transform:scale(1)}100%{opacity:0;transform:scale(1.65)}}
+  /* Ripple ring на монете — GPU only */
+  .coin-ripple{position:absolute;border-radius:50%;border:2px solid rgba(255,215,0,0.65);pointer-events:none;z-index:6;width:170px;height:170px;top:calc(50% - 85px);left:calc(50% - 85px);opacity:0;transform-origin:center center;will-change:opacity,transform;transform:translateZ(0)}
+  @keyframes coinRipple{0%{opacity:0.8;transform:scale(1) translateZ(0)}100%{opacity:0;transform:scale(1.7) translateZ(0)}}
 
-  /* Шок-волна при сильном комбо */
-  .shockwave{position:absolute;border-radius:50%;pointer-events:none;z-index:4;will-change:opacity,transform;animation:shockwaveAnim 0.5s ease-out forwards}
-  @keyframes shockwaveAnim{0%{width:80px;height:80px;opacity:0.6;top:45px;left:45px;background:radial-gradient(circle,rgba(255,215,0,0.4),transparent 70%)}100%{width:320px;height:320px;opacity:0;top:-75px;left:-75px;background:radial-gradient(circle,rgba(255,215,0,0.1),transparent 70%)}}
+  /* Шок-волна при сильном комбо — только transform+opacity */
+  .shockwave{position:absolute;border-radius:50%;pointer-events:none;z-index:4;will-change:opacity,transform;animation:shockwaveAnim 0.45s ease-out forwards;top:50%;left:50%;margin:-40px 0 0 -40px;width:80px;height:80px;border:2px solid rgba(255,215,0,0.5)}
+  @keyframes shockwaveAnim{0%{opacity:0.7;transform:scale(1) translateZ(0)}100%{opacity:0;transform:scale(4.5) translateZ(0)}}
 
   /* Монета пресс + свечение */
-  .coin-btn.pressed{transform:translate(-50%,-50%) scale(.88)!important;box-shadow:0 0 0 3px #b8860b,0 0 60px rgba(255,200,0,.55),inset 0 8px 20px rgba(0,0,0,.7)!important;filter:brightness(1.15)}
+  .coin-btn.pressed{transform:translate(-50%,-50%) scale(.88) translateZ(0)!important;box-shadow:0 0 0 3px #b8860b,0 0 60px rgba(255,200,0,.55),inset 0 8px 20px rgba(0,0,0,.7)!important;filter:brightness(1.18)}
   .coin-btn{transition:transform .06s cubic-bezier(.2,.8,.2,1),box-shadow .06s ease,filter .06s ease!important}
 
-  /* Монета idle pulse */
-  @keyframes coinShake{0%,100%{transform:translate(-50%,-50%) rotate(0deg)}25%{transform:translate(calc(-50% - 4px),-50%) rotate(-3deg)}75%{transform:translate(calc(-50% + 4px),-50%) rotate(3deg)}}
+  /* Монета idle pulse — только box-shadow, не transform */
+  @keyframes coinShake{0%,100%{transform:translate(-50%,-50%) rotate(0deg) translateZ(0)}25%{transform:translate(calc(-50% - 3px),-50%) rotate(-2.5deg) translateZ(0)}75%{transform:translate(calc(-50% + 3px),-50%) rotate(2.5deg) translateZ(0)}}
   @keyframes coinIdle{0%,100%{box-shadow:0 0 0 3px #b8860b,0 0 40px rgba(255,200,0,.18),inset 0 4px 18px rgba(255,255,255,.2),inset 0 -8px 18px rgba(0,0,0,.5)}50%{box-shadow:0 0 0 3px #d4a000,0 0 70px rgba(255,200,0,.28),inset 0 4px 18px rgba(255,255,255,.25),inset 0 -8px 18px rgba(0,0,0,.5)}}
   .coin-btn:not(.pressed){animation:coinIdle 2.5s ease-in-out infinite}
 
-  /* Combo multiplier flash */
-  .combo-flash{position:fixed;pointer-events:none;z-index:998;font-family:'Cinzel Decorative',serif;font-weight:900;letter-spacing:4px;will-change:transform,opacity;animation:comboFlash 0.7s ease-out forwards;text-shadow:0 0 30px currentColor}
-  @keyframes comboFlash{0%{opacity:1;transform:translate(-50%,-50%) scale(0.5)}40%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5) translateY(-30px)}}
+  /* Combo multiplier flash — transform+opacity only */
+  .combo-flash{position:fixed;pointer-events:none;z-index:998;font-family:'Cinzel Decorative',serif;font-weight:900;letter-spacing:4px;will-change:transform,opacity;animation:comboFlash 0.65s ease-out forwards;text-shadow:0 0 30px currentColor;transform:translateZ(0)}
+  @keyframes comboFlash{0%{opacity:1;transform:translate(-50%,-50%) scale(0.4) translateZ(0)}35%{opacity:1;transform:translate(-50%,-50%) scale(1.15) translateZ(0)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4) translateY(-28px) translateZ(0)}}
 
-  /* Золотые искры-звёздочки */
-  .star-spark{position:fixed;pointer-events:none;z-index:997;will-change:transform,opacity;animation:starSpark var(--dur,.8s) ease-out forwards}
-  @keyframes starSpark{0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1)}100%{opacity:0;transform:var(--sp-end) rotate(var(--rot,360deg)) scale(0)}}
-  
+  /* Floater — transform+opacity only */
+  .floater{position:fixed;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--gold);pointer-events:none;z-index:999;text-shadow:0 0 10px var(--gold-glow);animation:fu .8s ease-out forwards;will-change:transform,opacity;transform:translateZ(0)}
+  @keyframes fu{0%{opacity:1;transform:translateY(0) scale(1) translateZ(0)}100%{opacity:0;transform:translateY(-70px) scale(.7) translateZ(0)}}
+
+  /* Combo burst */
+  .combo-burst{position:fixed;pointer-events:none;z-index:998;border-radius:50%;will-change:transform,opacity;animation:cb .45s ease-out forwards;transform:translateZ(0)}
+  @keyframes cb{0%{opacity:.6;transform:scale(0) translateZ(0)}100%{opacity:0;transform:scale(3) translateZ(0)}}
+
+  /* Золотые искры */
+  .star-spark{position:fixed;pointer-events:none;z-index:997;will-change:transform,opacity;animation:starSpark var(--dur,.75s) ease-out forwards;transform:translateZ(0)}
+  @keyframes starSpark{0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1) translateZ(0)}100%{opacity:0;transform:var(--sp-end) rotate(var(--rot,360deg)) scale(0) translateZ(0)}}
+
   /* Sparkle particle */
-  .sparkle{position:fixed;width:6px;height:6px;border-radius:50%;pointer-events:none;z-index:997;will-change:transform,opacity;animation:sp .7s ease-out forwards}
-  @keyframes sp{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:var(--sp-end) scale(0)}}
+  .sparkle{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:997;will-change:transform,opacity;animation:sp .65s ease-out forwards;transform:translateZ(0)}
+  @keyframes sp{0%{opacity:1;transform:translate(0,0) scale(1) translateZ(0)}100%{opacity:0;transform:var(--sp-end) scale(0) translateZ(0)}}
 
   /* ══ REDESIGN: TOP ENTRIES ══ */
   .top-entry{background:linear-gradient(135deg,rgba(20,16,0,.95),rgba(12,10,0,.95));border:1px solid rgba(255,215,0,.1);border-radius:16px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:11px;transition:all .2s;position:relative;overflow:hidden}
@@ -312,14 +320,14 @@
   /* ── NEW PROFILE ── */
   #screen-profile{padding:0;align-items:stretch;overflow-y:auto;padding-top:env(safe-area-inset-top,0px)}
 
-  /* Hero — большой баннер с аватаром по центру */
-  .prof-hero{position:relative;flex-shrink:0;overflow:hidden;padding:24px 16px 28px;text-align:center}
-  .prof-hero-bg{position:absolute;inset:0;background:linear-gradient(180deg,#1a1200 0%,#0d0900 60%,#080600 100%);z-index:0}
-  .prof-hero-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(255,215,0,.12) 0%,transparent 70%)}
-  .prof-hero-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4),transparent)}
+  /* Hero — glassmorphism прозрачный баннер */
+  .prof-hero{position:relative;flex-shrink:0;overflow:hidden;padding:28px 16px 32px;text-align:center}
+  .prof-hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,215,0,.06) 0%,rgba(0,0,0,.0) 40%,rgba(255,140,0,.04) 100%);backdrop-filter:blur(0px);z-index:0}
+  .prof-hero-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 20%,rgba(255,215,0,.18) 0%,rgba(255,140,0,.06) 40%,transparent 70%)}
+  .prof-hero-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.5),transparent)}
   .prof-hero-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:10px}
-  .prof-avatar-ring{width:80px;height:80px;flex-shrink:0;border-radius:50%;padding:3px;background:linear-gradient(135deg,#ffe87a,#b8860b,#ffa500);box-shadow:0 0 30px rgba(255,215,0,.3),0 0 60px rgba(255,215,0,.1)}
-  .prof-avatar-inner{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a1e00,#0d0900);display:flex;align-items:center;justify-content:center;font-size:34px}
+  .prof-avatar-ring{width:84px;height:84px;flex-shrink:0;border-radius:50%;padding:3px;background:linear-gradient(135deg,#ffe87a,#b8860b,#ffa500);box-shadow:0 0 40px rgba(255,215,0,.35),0 0 80px rgba(255,215,0,.12);filter:drop-shadow(0 0 12px rgba(255,200,0,.4))}
+  .prof-avatar-inner{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(42,30,0,.9),rgba(8,6,0,.95));display:flex;align-items:center;justify-content:center;font-size:36px;backdrop-filter:blur(4px)}
   .prof-name-row{display:flex;align-items:center;gap:8px;justify-content:center}
   .prof-hero-name{font-family:'Cinzel Decorative',serif;font-size:20px;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.4)}
   .prof-nick-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);color:var(--gold3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
@@ -328,7 +336,7 @@
   .prof-hero-id{font-size:7px;color:#3a3020;letter-spacing:1.5px;margin-top:-4px}
 
   /* Горизонтальные мини-статы под героем */
-  .prof-quick-stats{display:flex;gap:0;flex-shrink:0;border-bottom:1px solid rgba(255,215,0,.07)}
+  .prof-quick-stats{display:flex;gap:0;flex-shrink:0;border-bottom:1px solid rgba(255,215,0,.07);background:rgba(255,215,0,.03);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
   .prof-qs-item{flex:1;padding:10px 4px;text-align:center;border-right:1px solid rgba(255,215,0,.06)}
   .prof-qs-item:last-child{border-right:none}
   .prof-qs-val{display:block;font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);line-height:1}
@@ -490,6 +498,21 @@
   .ck-ticker-val{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);font-weight:700}
   .ck-ticker-lbl{font-size:7px;color:var(--muted);letter-spacing:.5px}
   .ck-ticker-sep{color:rgba(255,215,0,.2);font-size:10px;margin:0 2px}
+  /* Prestige */
+  .prestige-info{background:rgba(180,79,255,.06);border:1px solid rgba(180,79,255,.12);border-radius:11px;padding:11px;margin-bottom:10px}
+  .prestige-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .prestige-row:last-child{margin-bottom:0}
+  .prestige-lbl{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
+  .prestige-val{font-size:12px;color:var(--elite);font-weight:600}
+  .prestige-bonus-list{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  .prestige-bonus-item{font-size:8px;color:rgba(180,79,255,.7);letter-spacing:1px;background:rgba(180,79,255,.05);border-radius:6px;padding:4px 8px}
+  .prestige-req{font-size:7.5px;color:var(--muted);letter-spacing:1px;text-align:center;margin-bottom:8px;padding:6px;background:rgba(0,0,0,.2);border-radius:7px}
+  .prestige-req span{color:var(--gold)}
+  .prestige-btn{width:100%;padding:12px;border:none;border-radius:11px;font-family:'Cinzel Decorative',serif;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .2s}
+  .prestige-btn:not(:disabled){background:linear-gradient(135deg,#9b30ff,#5500aa);color:#fff;box-shadow:0 4px 20px rgba(155,48,255,.3)}
+  .prestige-btn:not(:disabled):active{transform:scale(.97)}
+  .prestige-btn:disabled{background:#1a1a1a;color:#333;cursor:not-allowed}
+
   ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:4px}
 
   /* Success modal */
@@ -942,7 +965,7 @@
       </div>
     </div>
 
-    <!-- Обмен монет -->
+    <!-- Обмен монет на алмазы -->
     <div class="prof-section">
       <div class="prof-section-header">
         <span class="prof-section-icon">💎</span>
@@ -956,6 +979,31 @@
         </div>
         <div class="prof-exchange-preview" id="exchange-preview">Введите сумму кратную 500 000</div>
       </div>
+    </div>
+
+    <!-- Обмен алмазов на монеты -->
+    <div class="prof-section" style="border-color:rgba(0,229,255,.15)">
+      <div class="prof-section-header">
+        <span class="prof-section-icon" style="border-color:rgba(0,229,255,.2);background:rgba(0,229,255,.06)">💰</span>
+        <span class="prof-section-title" style="color:#00e5ff">Обмен алмазов на монеты</span>
+      </div>
+      <div class="prof-exchange-inner">
+        <div class="prof-exchange-rate" style="color:rgba(0,229,255,.5)">1 💎 = 300 000 G · Имеется: <span id="dia-to-money-have">0</span> 💎</div>
+        <div class="prof-exchange-row">
+          <input class="prof-exchange-input" id="dia2money-amt" type="number" placeholder="1" min="1" step="1" oninput="updateDia2MoneyPreview()" style="border-color:rgba(0,229,255,.2);color:#00e5ff">
+          <button class="prof-exchange-btn" onclick="doDia2Money()" style="background:linear-gradient(135deg,#00b4cc,#005a70);color:#fff">ОБМЕНЯТЬ</button>
+        </div>
+        <div class="prof-exchange-preview" id="dia2money-preview" style="color:rgba(0,229,255,.5)">1 💎 → 300 000 G</div>
+      </div>
+    </div>
+
+    <!-- Престиж -->
+    <div class="prof-section" id="prestige-section" style="border-color:rgba(180,79,255,.18)">
+      <div class="prof-section-header">
+        <span class="prof-section-icon" style="border-color:rgba(180,79,255,.25);background:rgba(180,79,255,.08)">♻️</span>
+        <span class="prof-section-title" style="color:var(--elite)">Престиж</span>
+      </div>
+      <div id="prestige-content"></div>
     </div>
 
     <!-- Клан -->
@@ -1170,7 +1218,8 @@ function mkState(tgId, username) {
     activeSkin: 'default', activeBg: 'default', ownedSkins: [], ownedBgs: [],
     upgrades: DEFS.map(d => ({ id: d.id, level: 0, cost: d.base })),
     username: username || 'Игрок', tgId: tgId || 0,
-    claimedAchs: {},  // полученные награды за достижения (сохраняется на сервере)
+    claimedAchs: {},
+    prestigeLevel: 0, prestigeMultiplier: 1,
   };
 }
 
@@ -1277,24 +1326,26 @@ function _flushSave(force = false, exact = false) {
   _lastFlushMs = Date.now();
 
   const stateClean = {
-    totalCoins:     S.totalCoins  || 0,
-    totalClicks:    S.totalClicks || 0,
-    clickPower:     S.clickPower  || 1,
-    perSecond:      S.perSecond   || 0,
-    diamonds:       parseInt(S.diamonds) || 0,
-    upgrades:       S.upgrades    || [],
-    activeSkin:     S.activeSkin  || 'default',
-    activeBg:       S.activeBg    || 'default',
-    ownedSkins:     (S.ownedSkins || []).filter(x => typeof x === 'string'),
-    ownedBgs:       (S.ownedBgs   || []).filter(x => typeof x === 'string'),
-    username:       S.username    || 'Игрок',
-    tgId:           S.tgId        || 0,
-    _lastSeen:      Math.floor(Date.now() / 1000),
-    tradeHistory:   S.tradeHistory ? S.tradeHistory.slice(0, 20) : [],
-    _dailySaves:    S._dailySaves    || 0,
-    _dailyUpgrades: S._dailyUpgrades || 0,
-    claimedAchs:    S.claimedAchs    || {},
-    dailyClaimed:   S.dailyClaimed   || {},
+    totalCoins:          S.totalCoins  || 0,
+    totalClicks:         S.totalClicks || 0,
+    clickPower:          S.clickPower  || 1,
+    perSecond:           S.perSecond   || 0,
+    diamonds:            parseInt(S.diamonds) || 0,
+    upgrades:            S.upgrades    || [],
+    activeSkin:          S.activeSkin  || 'default',
+    activeBg:            S.activeBg    || 'default',
+    ownedSkins:          (S.ownedSkins || []).filter(x => typeof x === 'string'),
+    ownedBgs:            (S.ownedBgs   || []).filter(x => typeof x === 'string'),
+    username:            S.username    || 'Игрок',
+    tgId:                S.tgId        || 0,
+    _lastSeen:           Math.floor(Date.now() / 1000),
+    tradeHistory:        S.tradeHistory ? S.tradeHistory.slice(0, 20) : [],
+    _dailySaves:         S._dailySaves    || 0,
+    _dailyUpgrades:      S._dailyUpgrades || 0,
+    claimedAchs:         S.claimedAchs    || {},
+    dailyClaimed:        S.dailyClaimed   || {},
+    prestigeLevel:       S.prestigeLevel       || 0,
+    prestigeMultiplier:  S.prestigeMultiplier  || 1,
   };
 
   const body = JSON.stringify({ tg_id: S.tgId, state: stateClean, coins: coinsSnapshot, delta, exact });
@@ -1305,15 +1356,22 @@ function _flushSave(force = false, exact = false) {
     if (d && d.db_game_balance !== undefined) {
       const dbBal = parseInt(d.db_game_balance) || 0;
       const localCoins = Math.floor(S.coins);
-      // dbBal — баланс после нашего save (уже включает отправленную дельту).
-      // Ожидаемый локальный баланс = dbBal + ещё не отправленная дельта.
-      // Если расхождение > 100 — кто-то изменил баланс снаружи (OCP/казино/трейд).
       const expectedLocal = dbBal + Math.floor(_pendingDelta);
       if (Math.abs(expectedLocal - localCoins) > 100) {
         S.coins = expectedLocal;
         updateUI();
       }
       if (typeof _topCacheTs !== 'undefined') _topCacheTs = 0;
+    }
+    // Синхронизируем алмазы из ответа сервера (отдельная колонка)
+    if (d && d.db_diamonds !== undefined) {
+      const serverDia = parseInt(d.db_diamonds) || 0;
+      if (serverDia > (parseInt(S.diamonds) || 0)) {
+        S.diamonds = serverDia;
+        const dEl = document.getElementById('dia-to-money-have');
+        if (dEl) dEl.textContent = S.diamonds;
+        updateUI();
+      }
     }
     if (_saveQueue) {
       const q = _saveQueue; _saveQueue = null;
@@ -1362,24 +1420,26 @@ function _beaconSave() {
   if (!S.tgId) return;
   // Snapshot всего стейта + дельта
   const stateSnap = {
-    totalCoins:     S.totalCoins  || 0,
-    totalClicks:    S.totalClicks || 0,
-    clickPower:     S.clickPower  || 1,
-    perSecond:      S.perSecond   || 0,
-    diamonds:       parseInt(S.diamonds) || 0,
-    upgrades:       S.upgrades    || [],
-    activeSkin:     S.activeSkin  || 'default',
-    activeBg:       S.activeBg    || 'default',
-    ownedSkins:     (S.ownedSkins || []).filter(x => typeof x === 'string'),
-    ownedBgs:       (S.ownedBgs   || []).filter(x => typeof x === 'string'),
-    username:       S.username    || 'Игрок',
-    tgId:           S.tgId        || 0,
-    _lastSeen:      Math.floor(Date.now() / 1000),
-    tradeHistory:   S.tradeHistory ? S.tradeHistory.slice(0, 20) : [],
-    _dailySaves:    S._dailySaves    || 0,
-    _dailyUpgrades: S._dailyUpgrades || 0,
-    claimedAchs:    S.claimedAchs    || {},
-    dailyClaimed:   S.dailyClaimed   || {},
+    totalCoins:          S.totalCoins  || 0,
+    totalClicks:         S.totalClicks || 0,
+    clickPower:          S.clickPower  || 1,
+    perSecond:           S.perSecond   || 0,
+    diamonds:            parseInt(S.diamonds) || 0,
+    upgrades:            S.upgrades    || [],
+    activeSkin:          S.activeSkin  || 'default',
+    activeBg:            S.activeBg    || 'default',
+    ownedSkins:          (S.ownedSkins || []).filter(x => typeof x === 'string'),
+    ownedBgs:            (S.ownedBgs   || []).filter(x => typeof x === 'string'),
+    username:            S.username    || 'Игрок',
+    tgId:                S.tgId        || 0,
+    _lastSeen:           Math.floor(Date.now() / 1000),
+    tradeHistory:        S.tradeHistory ? S.tradeHistory.slice(0, 20) : [],
+    _dailySaves:         S._dailySaves    || 0,
+    _dailyUpgrades:      S._dailyUpgrades || 0,
+    claimedAchs:         S.claimedAchs    || {},
+    dailyClaimed:        S.dailyClaimed   || {},
+    prestigeLevel:       S.prestigeLevel       || 0,
+    prestigeMultiplier:  S.prestigeMultiplier  || 1,
   };
   const delta = Math.floor(_pendingDelta);
   _pendingDelta = 0; // сбрасываем чтобы не задвоить при повторном вызове
@@ -2650,6 +2710,109 @@ function doExchange() {
   showToast(`+${d} 💎 Алмазов получено!`, 'ok');
 }
 
+// ── Diamond → Money Exchange ──────────────────────────────────
+
+function updateDia2MoneyPreview() {
+  const amt = Math.floor(parseFloat(document.getElementById('dia2money-amt')?.value) || 0);
+  const money = amt * 300000;
+  const el = document.getElementById('dia2money-preview');
+  const haveEl = document.getElementById('dia-to-money-have');
+  if (haveEl) haveEl.textContent = S.diamonds || 0;
+  if (el) el.textContent = amt > 0 ? `${amt} 💎 → ${fmt(money)} G` : '1 💎 → 300 000 G';
+}
+
+function doDia2Money() {
+  const amt = Math.floor(parseFloat(document.getElementById('dia2money-amt')?.value) || 0);
+  if (amt < 1) { showToast('Введите количество алмазов', 'err'); return; }
+  if ((S.diamonds || 0) < amt) { showToast('Недостаточно 💎 алмазов', 'err'); return; }
+  const money = amt * 300000;
+  S.diamonds -= amt;
+  addCoins(money);
+  _saveUpgradeBackup();
+  document.getElementById('dia2money-amt').value = '';
+  updateDia2MoneyPreview(); updateUI(); saveNow(true);
+  showToast(`+${fmt(money)} G за ${amt} 💎!`, 'ok');
+}
+
+// ── Prestige System ───────────────────────────────────────────
+
+const PRESTIGE_LEVELS = [
+  { level: 1, req: 1000000,    bonus: '+10% к монетам/клик', multiplier: 1.10 },
+  { level: 2, req: 5000000,    bonus: '+20% ко всему',       multiplier: 1.20 },
+  { level: 3, req: 25000000,   bonus: '+35% ко всему',       multiplier: 1.35 },
+  { level: 4, req: 100000000,  bonus: '+50% ко всему',       multiplier: 1.50 },
+  { level: 5, req: 500000000,  bonus: '+75% ко всему',       multiplier: 1.75 },
+];
+
+function getPrestigeLevel() { return parseInt(S.prestigeLevel) || 0; }
+
+function buildPrestigeContent() {
+  const box = document.getElementById('prestige-content');
+  if (!box) return;
+  const curLevel = getPrestigeLevel();
+  const nextP = PRESTIGE_LEVELS[curLevel]; // следующий престиж
+  const coins = Math.floor(S.coins);
+  const canPrestige = nextP && coins >= nextP.req;
+
+  let html = '';
+
+  // Текущий уровень престижа
+  html += `<div class="prestige-info">
+    <div class="prestige-row"><span class="prestige-lbl">Текущий престиж</span><span class="prestige-val">${curLevel > 0 ? '✦ Уровень ' + curLevel : 'Нет'}</span></div>
+    <div class="prestige-row"><span class="prestige-lbl">Всего кликов</span><span class="prestige-val">${fmt(S.totalClicks)}</span></div>
+    ${curLevel > 0 ? `<div class="prestige-row"><span class="prestige-lbl">Активный бонус</span><span class="prestige-val" style="color:var(--elite)">${PRESTIGE_LEVELS[curLevel-1].bonus}</span></div>` : ''}
+  </div>`;
+
+  // Что даёт следующий престиж
+  if (nextP) {
+    html += `<div style="font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;padding-left:4px">СЛЕДУЮЩИЙ ПРЕСТИЖ — УР. ${nextP.level}</div>`;
+    html += `<div class="prestige-bonus-list">
+      <div class="prestige-bonus-item">♻️ Сброс монет и улучшений</div>
+      <div class="prestige-bonus-item">⚡ ${nextP.bonus}</div>
+      <div class="prestige-bonus-item">💎 +${nextP.level * 3} алмазов за престиж</div>
+    </div>`;
+    const pct = Math.min(100, (coins / nextP.req) * 100);
+    html += `<div class="prestige-req">Нужно: <span>${fmt(nextP.req)} G</span> · Есть: <span>${fmt(coins)} G</span> · ${pct.toFixed(0)}%</div>`;
+    html += `<div style="width:100%;height:4px;background:rgba(180,79,255,.1);border-radius:2px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,#9b30ff,#b44fff);border-radius:2px;transition:width .5s"></div></div>`;
+  } else {
+    html += `<div class="prestige-bonus-list"><div class="prestige-bonus-item" style="color:var(--gold)">🏆 Максимальный престиж достигнут!</div></div>`;
+  }
+
+  html += `<button class="prestige-btn" ${canPrestige ? '' : 'disabled'} onclick="doPrestige()">
+    ${canPrestige ? '♻️ ВЫПОЛНИТЬ ПРЕСТИЖ' : nextP ? `Нужно ${fmt(nextP.req)} G` : 'МАК. УРОВЕНЬ'}
+  </button>`;
+
+  box.innerHTML = html;
+}
+
+function doPrestige() {
+  const curLevel = getPrestigeLevel();
+  const nextP = PRESTIGE_LEVELS[curLevel];
+  if (!nextP) { showToast('Максимальный престиж!', 'err'); return; }
+  if (S.coins < nextP.req) { showToast('Недостаточно монет', 'err'); return; }
+
+  if (!confirm(`♻️ ПРЕСТИЖ ${nextP.level}\n\nСброс монет и улучшений.\nВзамен: ${nextP.bonus} + ${nextP.level * 3} 💎\n\nПодтвердить?`)) return;
+
+  // Сброс
+  S.coins = 0;
+  S.totalCoins = 0;
+  _pendingDelta = 0;
+  S.upgrades = S.upgrades.map(u => ({ ...u, level: 0, cost: (DEFS.find(d => d.id === u.id) || {}).base || u.cost }));
+  S.prestigeLevel = curLevel + 1;
+  S.prestigeMultiplier = nextP.multiplier;
+  S.diamonds = (S.diamonds || 0) + nextP.level * 3;
+
+  // Пересчёт
+  recomputeStatsFromUpgrades();
+  _saveUpgradeBackup();
+  buildPrestigeContent();
+  buildUpgrades();
+  updateUI();
+  saveNow(true);
+  showToast(`✦ Престиж ${nextP.level}! +${nextP.level * 3} 💎`, 'ok');
+  spawnComboFlash(window.innerWidth / 2, window.innerHeight / 2, 'PRESTIGE!');
+}
+
 // ── Clan ─────────────────────────────────────────────────────
 
 let clanMode = 'view';
@@ -3099,7 +3262,7 @@ function restoreClickBan(banUntilTs, reason) {
     const spamResult = _checkClickSpam(now);
     if (spamResult === 'banned' || spamResult === 'warn') return;
 
-    addCoins(S.clickPower);
+    addCoins(Math.floor(S.clickPower * (S.prestigeMultiplier || 1)));
     S.totalClicks++;
 
     comboCount = (now - lastClickTime < COMBO_WINDOW) ? comboCount + 1 : 1;
@@ -3284,31 +3447,61 @@ function spawnBurst(x, y) {
 
 // Passive income: accumulate every 500ms (less overhead, same result)
 let _passiveAccum = 0;
-setInterval(() => {
-  if (S.perSecond > 0 && !document.hidden) {
-    const gain = S.perSecond * 0.5;
+// ── Единый игровой тик через RAF — всё в одном месте ──
+// Пассивный доход + UI + медленные операции
+let _lastTickMs = 0;
+let _slowTickAccum = 0;
+let _saveTickAccum = 0;
+
+function _gameTick(ts) {
+  requestAnimationFrame(_gameTick);
+  if (document.hidden) return;
+
+  const now = ts || performance.now();
+  const dt = _lastTickMs ? Math.min(now - _lastTickMs, 100) : 16;
+  _lastTickMs = now;
+
+  // Пассивный доход — каждый кадр пропорционально dt
+  if (S.perSecond > 0) {
+    const gain = S.perSecond * (dt / 1000) * (S.prestigeMultiplier || 1);
     S.coins      += gain;
     S.totalCoins += gain;
     _pendingDelta += gain;
   }
-}, 500);
 
-// UI update — throttled to ~300ms via RAF to avoid layout thrashing
+  // UI — каждые 200ms
+  if (!_rafPending) {
+    _rafPending = true;
+    updateUI();
+    _rafPending = false;
+  }
+
+  // Медленные операции — каждые 6 сек
+  _slowTickAccum += dt;
+  if (_slowTickAccum >= 6000) {
+    _slowTickAccum = 0;
+    updateNextUpgrade();
+    updateAchievements();
+    buildAch();
+    _saveUpgradeBackup();
+  }
+
+  // Авто-сохранение — каждые 4 сек (только если есть дельта)
+  _saveTickAccum += dt;
+  if (_saveTickAccum >= 4000) {
+    _saveTickAccum = 0;
+    if (_pendingDelta > 0) save();
+  }
+}
+
 let _rafPending = false;
+requestAnimationFrame(_gameTick);
+
 function _scheduleUI() {
   if (_rafPending) return;
   _rafPending = true;
   requestAnimationFrame(() => { _rafPending = false; updateUI(); });
 }
-setInterval(_scheduleUI, 300);
-
-// Slow ops — раз в 6 сек
-setInterval(() => { updateNextUpgrade(); updateAchievements(); buildAch(); _saveUpgradeBackup(); }, 6000);
-
-// Авто-сохранение — каждые 4 сек, включая фоновый режим
-setInterval(() => {
-  if (_pendingDelta > 0) save(); // только если есть несохранённые изменения
-}, 4000);
 
 // ──────────────────────────────────────────────────────────────
 // 9. UI RENDER
@@ -3358,8 +3551,11 @@ function updateUI() {
   _set('pqs-diamonds',   (S.diamonds || 0) + '');
   _set('pstat-rank',     '#—');
   _set('prof-name',      S.username);
-  _set('prof-rank-label', getRank());
+  _set('prof-rank-label', getRank() + (S.prestigeLevel > 0 ? ` · ✦ Престиж ${S.prestigeLevel}` : ''));
   _set('prof-id',        'ID: ' + S.tgId + ' · @' + S.username);
+  // Dia2money have update
+  const d2mHave = document.getElementById('dia-to-money-have');
+  if (d2mHave) d2mHave.textContent = S.diamonds || 0;
   // Ticker updates
   const tCp = document.getElementById('tick-cp'); if(tCp) tCp.textContent = fmt(cp);
   const tPs2 = document.getElementById('tick-ps2'); if(tPs2) tPs2.textContent = fmtPs(ps);
@@ -3406,7 +3602,7 @@ function switchTab(btn, name) {
     buildTop();
   }
   if (name === 'upgrade') buildUpgrades();
-  if (name === 'profile') { updateUI(); buildClanContent(); buildDailyQuests(); }
+  if (name === 'profile') { updateUI(); buildClanContent(); buildDailyQuests(); buildPrestigeContent(); updateDia2MoneyPreview(); }
 }
 
 // Achievements strip
@@ -3609,6 +3805,10 @@ async function initGame() {
       // coins ВСЕГДА из БД
       S.coins = dbBal;
       if (!S.totalCoins || S.totalCoins < dbBal) S.totalCoins = dbBal;
+      // diamonds ВСЕГДА берём максимум из БД колонки
+      if (data.db_diamonds !== undefined) {
+        S.diamonds = Math.max(parseInt(S.diamonds) || 0, parseInt(data.db_diamonds) || 0);
+      }
       if (data.clan !== undefined) S.clan = data.clan;
     } else {
       S = mkState(tg.id, tg.username || ('id' + tg.id));
@@ -3624,6 +3824,8 @@ async function initGame() {
   S.totalCoins  = Math.max(0, parseFloat(S.totalCoins)  || 0);
   S.totalClicks = Math.max(0, parseInt(S.totalClicks)   || 0);
   S.diamonds    = Math.max(0, parseInt(S.diamonds)      || 0);
+  S.prestigeLevel      = Math.max(0, parseInt(S.prestigeLevel)      || 0);
+  S.prestigeMultiplier = Math.max(1, parseFloat(S.prestigeMultiplier) || 1);
   if (!S.ownedSkins) S.ownedSkins = [];
   if (!S.ownedBgs)   S.ownedBgs   = [];
   if (!S.activeSkin) S.activeSkin = 'default';
