@@ -117,7 +117,7 @@ def _load_season_ts_from_db():
 WEBAPP_URL = "https://incolex.github.io/bottgcasinoclicker/clicker.html"
 
 # ── Ставки ───────────────────────────────────────────────────
-BETS = config.BET_PRESETS  # [1000, 10000, 50000, 100000, 500000, 1000000, 5000000]
+BETS = config.BET_PRESETS  # [250, 750, 3000, 9000, 15000, 25000, 50000]
 
 
 # ── Клавиатуры ───────────────────────────────────────────────
@@ -1021,7 +1021,7 @@ async def cmd_trade(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # Поиск получателя — регистронезависимый
     conn = db.get_conn()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor()
     cur.execute(
         "SELECT user_id, username FROM users WHERE LOWER(username)=LOWER(%s)",
         (raw_username,)
@@ -1452,39 +1452,13 @@ async def _do_season_reset(bot):
     try:
         cur.execute("CREATE TABLE IF NOT EXISTS season_archive (id SERIAL PRIMARY KEY,season_num INTEGER DEFAULT 1,ended_at INTEGER,top_json TEXT)")
         cur.execute("SELECT COALESCE(MAX(season_num),0)+1 AS ns FROM season_archive")
-        _ns_row=cur.fetchone(); ns=int(_ns_row["ns"]) if _ns_row else 1
+        ns=cur.fetchone()["ns"]
         cur.execute("INSERT INTO season_archive(season_num,ended_at,top_json) VALUES(%s,%s,%s)",
             (ns,int(time.time()),json.dumps([{"rank":i+1,"username":r["username"],"user_id":r["user_id"],"game_balance":r.get("game_balance") or 0} for i,r in enumerate(top3)],ensure_ascii=False)))
-        # Сбрасываем прокачки, сохраняя алмазы/скины/фоны у всех пользователей
-        cur.execute("SELECT user_id, game_state FROM users WHERE game_state IS NOT NULL")
-        all_users = cur.fetchall()
-        for u in all_users:
-            try:
-                st = json.loads(u["game_state"]) if u["game_state"] else {}
-            except Exception:
-                st = {}
-            reset_state = json.dumps({
-                "coins": 0, "totalCoins": 0, "totalClicks": 0,
-                "clickPower": 1, "perSecond": 0,
-                "diamonds": 0,
-                "upgrades": [],
-                "activeSkin": "default",
-                "activeBg": "default",
-                "ownedSkins": [],
-                "ownedBgs": [],
-                "username": st.get("username", f"id{u['user_id']}"),
-                "tgId": u["user_id"],
-                "clan": st.get("clan"),
-                "claimedAchs": {},
-                "prestige": 0,
-                "prestigeMultiplier": 1.0,
-                "dailyStreak": 0,
-                "lastDailyTs": 0,
-            }, ensure_ascii=False)
-            cur.execute("UPDATE users SET game_balance=0, game_state=%s WHERE user_id=%s", (reset_state, u["user_id"]))
-        cur.execute("UPDATE users SET game_balance=0, balance=0, xp=0, level=1 WHERE game_state IS NULL")
+        cur.execute("UPDATE users SET game_balance=0,balance=0,game_state=NULL,xp=0,level=1")
+        cur.execute("DELETE FROM clan_members"); cur.execute("DELETE FROM clans"); cur.execute("UPDATE users SET clan_id=NULL")
         cur.execute("DELETE FROM transfers")
-        # Сбрасываем таймер сезона в БД
+        # Сбросить таймер сезона в БД
         cur.execute("INSERT INTO settings(key,value) VALUES('season_end_ts','0') ON CONFLICT(key) DO UPDATE SET value='0'")
         conn.commit()
     except Exception as e: conn.rollback();logger.error(f"Season reset err: {e}")
@@ -1588,7 +1562,7 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if data == "ocp_find":
         # Показываем последних 8 игроков как кнопки + поле ввода
-        conn = db.get_conn(); cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        conn = db.get_conn(); cur = conn.cursor()
         cur.execute("SELECT user_id, username, game_balance, is_banned FROM users ORDER BY updated_at DESC NULLS LAST LIMIT 8")
         recent = cur.fetchall(); cur.close(); conn.close()
         _set_session(uid, {"type": "ocp_find"})
@@ -1690,7 +1664,7 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     elif data == "ocp_list":
         conn = db.get_conn()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur = conn.cursor()
         cur.execute("SELECT user_id, username, game_balance, level, is_banned, created_at FROM users ORDER BY game_balance DESC NULLS LAST LIMIT 20")
         rows = cur.fetchall()
         cur.close(); conn.close()
@@ -1734,8 +1708,7 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         players_with_state = 0
         for s in states:
             try:
-                _gs = s["game_state"] if isinstance(s, dict) else s[0]
-                st = json.loads(_gs)
+                st = json.loads(s["game_state"])
                 total_clicks += int(st.get("totalClicks", 0) or 0)
                 total_earned += int(st.get("totalCoins", 0) or 0)
                 total_per_sec += int(st.get("perSecond", 0) or 0)
@@ -1744,12 +1717,12 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 pass
         # Кланы
         cur.execute("SELECT COUNT(*) AS cc FROM clans")
-        _cc_row=cur.fetchone(); clan_count = (_cc_row["cc"] if isinstance(_cc_row, dict) else _cc_row[0]) or 0
+        clan_count = cur.fetchone()["cc"] or 0
         # Трейды
         cur.execute("SELECT COUNT(*) AS tc, COALESCE(SUM(amount),0) AS ta FROM transfers WHERE direction='trade'")
         trow = cur.fetchone()
-        trade_count = (trow["tc"] if isinstance(trow, dict) else trow[0]) or 0
-        trade_volume = int((trow["ta"] if isinstance(trow, dict) else trow[1]) or 0)
+        trade_count = trow["tc"] or 0
+        trade_volume = int(trow["ta"] or 0)
         cur.close(); conn.close()
 
         def _gfmt(n):
@@ -1907,7 +1880,7 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         # Выполняем сброс сезона
         conn = db.get_conn()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur = conn.cursor()
         try:
             # Сохраняем архив сезона
             cur.execute("""
@@ -1919,7 +1892,7 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 )
             """)
             cur.execute("SELECT COALESCE(MAX(season_num),0)+1 AS ns FROM season_archive")
-            _ns_row2=cur.fetchone(); next_season=int(_ns_row2["ns"]) if _ns_row2 else 1
+            next_season = cur.fetchone()["ns"]
             top_json = json.dumps([
                 {"rank": i+1, "username": r["username"], "user_id": r["user_id"],
                  "game_balance": r.get("game_balance") or 0}
@@ -1929,34 +1902,12 @@ async def ocp_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 "INSERT INTO season_archive (season_num, ended_at, top_json) VALUES (%s,%s,%s)",
                 (next_season, int(time.time()), top_json)
             )
-            # Сброс: game_balance и прокачки у всех, сохраняем алмазы/скины/фоны
-            cur.execute("SELECT user_id, game_state FROM users WHERE game_state IS NOT NULL")
-            all_users_season = cur.fetchall()
-            for u in all_users_season:
-                try:
-                    st = json.loads(u["game_state"]) if u["game_state"] else {}
-                except Exception:
-                    st = {}
-                reset_st = json.dumps({
-                    "coins": 0, "totalCoins": 0, "totalClicks": 0,
-                    "clickPower": 1, "perSecond": 0,
-                    "diamonds": 0,
-                    "upgrades": [],
-                    "activeSkin": "default",
-                    "activeBg": "default",
-                    "ownedSkins": [],
-                    "ownedBgs": [],
-                    "username": st.get("username", f"id{u['user_id']}"),
-                    "tgId": u["user_id"],
-                    "clan": st.get("clan"),
-                    "claimedAchs": {},
-                    "prestige": 0,
-                    "prestigeMultiplier": 1.0,
-                    "dailyStreak": 0,
-                    "lastDailyTs": 0,
-                }, ensure_ascii=False)
-                cur.execute("UPDATE users SET game_balance=0, game_state=%s WHERE user_id=%s", (reset_st, u["user_id"]))
-            cur.execute("UPDATE users SET game_balance=0, balance=0, xp=0, level=1 WHERE game_state IS NULL")
+            # Сброс: game_balance и game_state у всех
+            cur.execute("UPDATE users SET game_balance=0, balance=0, game_state=NULL, xp=0, level=1")
+            # Удалить все кланы и участников
+            cur.execute("DELETE FROM clan_members")
+            cur.execute("DELETE FROM clans")
+            cur.execute("UPDATE users SET clan_id=NULL")
             # Очистить историю переводов
             cur.execute("DELETE FROM transfers")
             conn.commit()
@@ -2258,7 +2209,7 @@ async def _handle_ocp_sessions(update: Update, ctx: ContextTypes.DEFAULT_TYPE, s
             target_id = int(txt)
         elif txt.startswith("@"):
             conn = db.get_conn()
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur = conn.cursor()
             cur.execute("SELECT user_id FROM users WHERE LOWER(username)=LOWER(%s)", (txt[1:],))
             row = cur.fetchone()
             cur.close(); conn.close()
@@ -2682,8 +2633,14 @@ async def _post_init(app):
         logger.info("Season timer coroutine restarted after bot startup")
 
 
-def _register_handlers(app):
-    """Регистрирует все хэндлеры на приложение."""
+def main():
+    db.init_db()
+    _load_admins_from_db()
+    _load_season_ts_from_db()
+    logger.info(f"Admins loaded from DB: {_admin_ids}")
+    logger.info(f"Season end ts loaded: {_season_end_ts}")
+    app = Application.builder().token(config.BOT_TOKEN).post_init(_post_init).build()
+
     for cmd, handler in [
         ("start",      cmd_start),
         ("profile",    show_profile),
@@ -2712,41 +2669,18 @@ def _register_handlers(app):
     app.add_handler(CallbackQueryHandler(ocp_callback,             pattern=r"^ocp_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
 
-
-def build_application():
-    """Строит и возвращает настроенное PTB Application (без запуска).
-    Используется как api_server.py при webhook-режиме, так и main() при polling.
-    """
-    db.init_db()
-    _load_admins_from_db()
-    _load_season_ts_from_db()
-    logger.info(f"Admins: {_admin_ids}")
-    logger.info(f"Season end ts: {_season_end_ts}")
-
-    app = Application.builder().token(config.BOT_TOKEN).post_init(_post_init).build()
-    _register_handlers(app)
-    return app
-
-
-def main():
-    app = build_application()
-
-    WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
-    if WEBHOOK_URL:
-        # Webhook mode — FastAPI в api_server.py принимает обновления
-        # Здесь просто держим процесс живым
-        logger.info(f"GOLDCLICK Bot: webhook mode (URL={WEBHOOK_URL})")
-        logger.info("Updates handled by FastAPI /tg-webhook endpoint")
-        import time as _time
-        while True:
-            _time.sleep(3600)
-    else:
-        # Polling mode — стандартный режим
-        logger.info("GOLDCLICK Bot starting in polling mode...")
-        app.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=["message", "callback_query"],
-        )
+    # Запуск через webhook
+    webhook_host = os.environ.get("WEBHOOK_HOST", "https://bottgcasinoclicker2.onrender.com")
+    port = int(os.environ.get("PORT", 10000))
+    logger.info(f"GOLDCLICK Bot starting (webhook: {webhook_host}/tg-webhook, port: {port})...")
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="/tg-webhook",
+        webhook_url=f"{webhook_host}/tg-webhook",
+        drop_pending_updates=True,
+        allowed_updates=["message", "callback_query"],
+    )
 
 
 if __name__ == "__main__":
