@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INCX VPN — интернет без границ</title>
+<meta name="description" content="INCX — VPN на WireGuard и AmneziaWG. Работает там, где блокируют обычные протоколы. Без логов, оплата в Telegram.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   INCX VPN — design tokens
+   ========================================================================== */
+:root {
+  --bg: #090b16; --bg-elevated: #11142a; --bg-card: #141833; --bg-card-hover: #181d3d;
+  --border: #232a52; --border-soft: #1a1f3f;
+  --text-primary: #eef0f8; --text-secondary: #a3a8c8; --text-dim: #5d6390;
+  --accent: #8277f5; --accent-dim: #5b52ad; --accent-soft: rgba(130,119,245,0.14); --accent-line: rgba(130,119,245,0.35);
+  --radius-sm: 10px; --radius-md: 16px; --radius-lg: 24px;
+  --font-display: "Unbounded", system-ui, sans-serif; --font-body: "Manrope", system-ui, sans-serif;
+  --container: 1080px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font-family: var(--font-body); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; margin: 0 0 0.5em; letter-spacing: -0.01em; }
+p { margin: 0 0 1em; color: var(--text-secondary); }
+code { background: var(--bg-elevated); padding: 2px 6px; border-radius: 6px; font-size: 0.9em; }
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+
+#starfield { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.page { position: relative; z-index: 1; }
+
+header.site-header { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(10px); background: rgba(9,11,22,0.72); border-bottom: 1px solid var(--border-soft); }
+.site-header .container { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+.logo { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.logo .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px 2px var(--accent-soft); }
+nav.main-nav { display: flex; align-items: center; gap: 32px; }
+nav.main-nav a { font-size: 14.5px; color: var(--text-secondary); transition: color 0.2s ease; white-space: nowrap; cursor: pointer; }
+nav.main-nav a:hover, nav.main-nav a.active { color: var(--text-primary); }
+.nav-links { display: flex; gap: 28px; }
+.menu-toggle { display: none; background: none; border: none; color: var(--text-primary); font-size: 24px; cursor: pointer; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-body); font-weight: 600; font-size: 14.5px; padding: 13px 24px; border-radius: 999px; cursor: pointer; border: 1px solid transparent; transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease; white-space: nowrap; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #0a0b18; }
+.btn-primary:hover { background: #968cf7; }
+.btn-secondary { background: transparent; border-color: var(--border); color: var(--text-primary); }
+.btn-secondary:hover { border-color: var(--accent-dim); background: var(--accent-soft); }
+.btn-small { padding: 9px 18px; font-size: 13.5px; }
+.btn-block { width: 100%; }
+
+.view { display: none; }
+.view.active { display: block; animation: fadeIn 0.35s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.hero { padding: 96px 0 64px; position: relative; }
+.hero-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-line); padding: 6px 14px; border-radius: 999px; margin-bottom: 24px; font-weight: 600; letter-spacing: 0.02em; }
+.hero h1 { font-size: clamp(34px, 5vw, 54px); margin-bottom: 20px; }
+.hero .lead { font-size: 17.5px; max-width: 480px; margin-bottom: 32px; }
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 36px; }
+.hero-meta { display: flex; gap: 28px; flex-wrap: wrap; }
+.hero-meta div { font-size: 13px; color: var(--text-dim); }
+.hero-meta strong { display: block; font-family: var(--font-display); font-size: 20px; color: var(--text-primary); font-weight: 600; }
+#route-canvas-wrap { position: relative; height: 380px; border-radius: var(--radius-lg); border: 1px solid var(--border-soft); background: linear-gradient(160deg, var(--bg-elevated), var(--bg)); overflow: hidden; }
+#route-canvas { width: 100%; height: 100%; }
+.route-label { position: absolute; font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-dim); background: rgba(9,11,22,0.7); padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border-soft); }
+.route-label.start { left: 16px; top: 16px; }
+.route-label.end { right: 16px; bottom: 16px; }
+
+section { padding: 88px 0; position: relative; }
+.section-head { max-width: 600px; margin-bottom: 48px; }
+.section-head .eyebrow { margin-bottom: 16px; }
+.section-head h2 { font-size: clamp(26px, 3.4vw, 36px); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 28px; transition: border-color 0.2s ease, background 0.2s ease; }
+.card:hover { border-color: var(--border); background: var(--bg-card-hover); }
+.step-card .step-num { font-family: var(--font-display); font-size: 13px; color: var(--accent); margin-bottom: 14px; display: block; }
+.step-card h3 { font-size: 17px; margin-bottom: 8px; }
+.step-card p { font-size: 14.5px; margin-bottom: 0; }
+.icon-badge { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent-line); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--accent); }
+
+.plan-card { position: relative; display: flex; flex-direction: column; }
+.plan-card.featured { border-color: var(--accent-dim); background: linear-gradient(160deg, var(--bg-card-hover), var(--bg-card)); }
+.plan-tag { position: absolute; top: -11px; right: 24px; background: var(--accent); color: #0a0b18; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em; }
+.plan-name { font-size: 14px; color: var(--text-dim); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.plan-price { font-family: var(--font-display); font-size: 32px; margin-bottom: 4px; }
+.plan-price span { font-size: 13px; color: var(--text-dim); font-family: var(--font-body); font-weight: 500; }
+.plan-sub { font-size: 13.5px; color: var(--text-dim); margin-bottom: 22px; }
+.plan-features { list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1; }
+.plan-features li { font-size: 14px; color: var(--text-secondary); padding: 8px 0; border-top: 1px solid var(--border-soft); display: flex; gap: 10px; }
+.plan-features li:first-child { border-top: none; }
+.plan-features li::before { content: "✓"; color: var(--accent); font-weight: 700; }
+
+.pricing-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-soft); }
+.pricing-table th, .pricing-table td { padding: 18px 20px; text-align: left; font-size: 14.5px; border-bottom: 1px solid var(--border-soft); }
+.pricing-table th { color: var(--text-dim); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; background: var(--bg-elevated); }
+.pricing-table td { color: var(--text-secondary); }
+.pricing-table td.price { color: var(--text-primary); font-weight: 700; font-family: var(--font-display); font-size: 15px; }
+.pricing-table tr:last-child td { border-bottom: none; }
+.pricing-table tr.highlight td { color: var(--text-primary); }
+.pricing-table .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 8px; vertical-align: middle; }
+
+.faq-item { border-bottom: 1px solid var(--border-soft); padding: 22px 0; }
+.faq-q { display: flex; justify-content: space-between; align-items: center; cursor: pointer; gap: 16px; }
+.faq-q h3 { font-size: 16.5px; margin: 0; font-weight: 600; font-family: var(--font-body); }
+.faq-toggle { font-size: 20px; color: var(--accent); flex-shrink: 0; transition: transform 0.25s ease; font-weight: 300; }
+.faq-item.open .faq-toggle { transform: rotate(45deg); }
+.faq-a { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.faq-a p { margin-top: 14px; font-size: 14.5px; }
+.faq-item.open .faq-a { max-height: 400px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--border-soft); flex-wrap: wrap; }
+.tab-btn { background: none; border: none; color: var(--text-dim); font-family: var(--font-body); font-weight: 600; font-size: 14.5px; padding: 12px 6px; cursor: pointer; position: relative; margin-right: 22px; }
+.tab-btn.active { color: var(--text-primary); }
+.tab-btn.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.setup-step { display: flex; gap: 18px; padding: 20px 0; border-bottom: 1px solid var(--border-soft); }
+.setup-step:last-child { border-bottom: none; }
+.setup-step .num { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-family: var(--font-display); font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.setup-step h4 { font-size: 15.5px; margin-bottom: 6px; }
+.setup-step p { font-size: 14.5px; margin-bottom: 0; }
+
+.callout { background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--radius-md); padding: 20px 24px; font-size: 14.5px; color: var(--text-secondary); margin: 28px 0; }
+.callout a { color: var(--accent); font-weight: 600; }
+.callout strong { color: var(--text-primary); }
+
+.cta-band { background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card)); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 56px 48px; text-align: center; }
+.cta-band h2 { margin-bottom: 14px; }
+.cta-band p { max-width: 480px; margin: 0 auto 28px; }
+.cta-band .hero-actions { justify-content: center; margin-bottom: 0; }
+
+footer.site-footer { border-top: 1px solid var(--border-soft); padding: 40px 0; margin-top: 40px; }
+.footer-grid { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.footer-links a { font-size: 13.5px; color: var(--text-dim); cursor: pointer; }
+.footer-links a:hover { color: var(--text-secondary); }
+.footer-note { font-size: 12.5px; color: var(--text-dim); }
+
+.page-hero { padding: 64px 0 24px; }
+.page-hero .eyebrow { margin-bottom: 18px; }
+.page-hero h1 { font-size: clamp(30px, 4.2vw, 44px); margin-bottom: 14px; }
+.page-hero p { max-width: 560px; }
+.text-center { text-align: center; }
+
+@media (max-width: 880px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  #route-canvas-wrap { height: 260px; order: -1; }
+  .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
+  nav.main-nav { display: none; }
+  .menu-toggle { display: block; }
+  nav.main-nav.open { display: flex; position: absolute; top: 72px; left: 0; right: 0; background: var(--bg-elevated); border-bottom: 1px solid var(--border-soft); flex-direction: column; align-items: flex-start; padding: 20px 24px; gap: 18px; }
+  .cta-band { padding: 40px 24px; }
+  .footer-grid { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="page">
+
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" data-view="home"><span class="dot"></span>INCX</a>
+      <nav class="main-nav">
+        <div class="nav-links">
+          <a data-view="home" class="active">Главная</a>
+          <a data-view="pricing">Тарифы</a>
+          <a data-view="setup">Подключение</a>
+          <a data-view="faq">FAQ</a>
+        </div>
+        <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary btn-small">Купить</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Меню">☰</button>
+    </div>
+  </header>
+
+  <main>
+
+  <!-- ===================== HOME ===================== -->
+  <div class="view active" id="view-home">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">● Без логов · WireGuard / AmneziaWG</span>
+          <h1>Интернет&nbsp;без границ,<br>даже когда блокируют всё подряд</h1>
+          <p class="lead">INCX находит путь для твоего трафика, когда обычные протоколы режут на уровне провайдера. Подключение за минуту через Telegram-бота.</p>
+          <div class="hero-actions">
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary">Купить в Telegram</a>
+            <a data-view="setup" class="btn btn-secondary">Как подключить</a>
+          </div>
+          <div class="hero-meta">
+            <div><strong>50₽</strong>от / 1 месяц</div>
+            <div><strong>2</strong>протокола на выбор</div>
+            <div><strong>~1 мин</strong>на подключение</div>
+          </div>
+        </div>
+        <div id="route-canvas-wrap">
+          <canvas id="route-canvas"></canvas>
+          <span class="route-label start">твой трафик</span>
+          <span class="route-label end">открытый интернет</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Как это работает</span>
+          <h2>От оплаты до подключения — четыре шага</h2>
+        </div>
+        <div class="grid-4">
+          <div class="card step-card"><span class="step-num">01</span><h3>Выбираешь тариф</h3><p>Прямо в Telegram-боте — без регистрации и лишних форм.</p></div>
+          <div class="card step-card"><span class="step-num">02</span><h3>Оплачиваешь</h3><p>СБП или криптовалюта — бот сам подтвердит платёж.</p></div>
+          <div class="card step-card"><span class="step-num">03</span><h3>Получаешь конфиг</h3><p>Ключ для WireGuard или AmneziaWG приходит сразу в чат.</p></div>
+          <div class="card step-card"><span class="step-num">04</span><h3>Импортируешь и готово</h3><p>Сканируешь QR или вставляешь файл в приложение — соединение установлено.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Почему INCX</span>
+          <h2>Сделан для условий, где обычный VPN перестаёт работать</h2>
+        </div>
+        <div class="grid-3">
+          <div class="card"><div class="icon-badge">◆</div><h3>AmneziaWG под капотом</h3><p>Когда обычный WireGuard режут по сигнатуре, переключаешься на обфусцированный протокол — трафик перестаёт выглядеть как VPN.</p></div>
+          <div class="card"><div class="icon-badge">●</div><h3>Без логов</h3><p>Не храним историю подключений и посещённых адресов. Точка.</p></div>
+          <div class="card"><div class="icon-badge">▲</div><h3>Оплата без бюрократии</h3><p>СБП или крипта прямо в боте — без привязки карты к стороннему сервису и лишних данных.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Тарифы</span>
+          <h2>Чем дольше период — тем дешевле месяц</h2>
+        </div>
+        <div class="grid-3">
+          <div class="card plan-card">
+            <div class="plan-name">1 месяц</div>
+            <div class="plan-price">70₽ <span>/ безлимит</span></div>
+            <div class="plan-sub">или 50₽ за пакет 200 ГБ</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary btn-block">Выбрать</a>
+          </div>
+          <div class="card plan-card featured">
+            <span class="plan-tag">Выгоднее</span>
+            <div class="plan-name">6 месяцев</div>
+            <div class="plan-price">432₽ <span>≈ 72₽/мес</span></div>
+            <div class="plan-sub">Безлимитный трафик</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary btn-block">Выбрать</a>
+          </div>
+          <div class="card plan-card">
+            <div class="plan-name">1 год</div>
+            <div class="plan-price">828₽ <span>≈ 69₽/мес</span></div>
+            <div class="plan-sub">Безлимитный трафик</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary btn-block">Выбрать</a>
+          </div>
+        </div>
+        <p class="text-center" style="margin-top:28px;"><a data-view="pricing" class="btn btn-secondary btn-small">Все тарифы и условия →</a></p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="cta-band">
+          <h2>Готов подключиться?</h2>
+          <p>Весь процесс — в одном Telegram-боте. Оплата, конфиг и поддержка в одном месте.</p>
+          <div class="hero-actions">
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary">Открыть бота</a>
+            <a data-view="faq" class="btn btn-secondary">Остались вопросы</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== PRICING ===================== -->
+  <div class="view" id="view-pricing">
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Тарифы</span>
+        <h1>Простые тарифы без скрытых условий</h1>
+        <p>Все тарифы включают оба протокола. Оплата — СБП или криптовалюта прямо в Telegram-боте.</p>
+      </div>
+    </section>
+    <section style="padding-top:24px;">
+      <div class="container">
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card plan-card">
+            <div class="plan-name">1 месяц · 200 ГБ</div>
+            <div class="plan-price">50₽</div>
+            <div class="plan-sub">Лимит трафика 200 ГБ</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li><li>Оплата СБП / крипта</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary btn-block">Выбрать в боте</a>
+          </div>
+          <div class="card plan-card">
+            <div class="plan-name">1 месяц · безлимит</div>
+            <div class="plan-price">70₽</div>
+            <div class="plan-sub">Без ограничений по трафику</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li><li>Оплата СБП / крипта</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary btn-block">Выбрать в боте</a>
+          </div>
+          <div class="card plan-card">
+            <div class="plan-name">3 месяца</div>
+            <div class="plan-price">230₽ <span>≈ 77₽/мес</span></div>
+            <div class="plan-sub">Безлимитный трафик</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li><li>Оплата СБП / крипта</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary btn-block">Выбрать в боте</a>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card plan-card featured">
+            <span class="plan-tag">Выгоднее</span>
+            <div class="plan-name">6 месяцев</div>
+            <div class="plan-price">432₽ <span>≈ 72₽/мес</span></div>
+            <div class="plan-sub">Безлимитный трафик</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li><li>Оплата СБП / крипта</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary btn-block">Выбрать в боте</a>
+          </div>
+          <div class="card plan-card featured">
+            <span class="plan-tag">Максимум выгоды</span>
+            <div class="plan-name">1 год</div>
+            <div class="plan-price">828₽ <span>≈ 69₽/мес</span></div>
+            <div class="plan-sub">Безлимитный трафик</div>
+            <ul class="plan-features"><li>WireGuard + AmneziaWG</li><li>Без логов</li><li>Оплата СБП / крипта</li></ul>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary btn-block">Выбрать в боте</a>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <div class="section-head"><span class="eyebrow">Детали</span><h2>Что входит в каждый тариф</h2></div>
+        <table class="pricing-table">
+          <thead><tr><th>Тариф</th><th>Трафик</th><th>Протоколы</th><th>Цена</th></tr></thead>
+          <tbody>
+            <tr><td>1 месяц</td><td>200 ГБ</td><td>WireGuard / AmneziaWG</td><td class="price">50₽</td></tr>
+            <tr><td>1 месяц</td><td>Безлимит</td><td>WireGuard / AmneziaWG</td><td class="price">70₽</td></tr>
+            <tr><td>3 месяца</td><td>Безлимит</td><td>WireGuard / AmneziaWG</td><td class="price">230₽</td></tr>
+            <tr class="highlight"><td>6 месяцев <span class="badge">Выгоднее</span></td><td>Безлимит</td><td>WireGuard / AmneziaWG</td><td class="price">432₽</td></tr>
+            <tr class="highlight"><td>1 год <span class="badge">Топ выгода</span></td><td>Безлимит</td><td>WireGuard / AmneziaWG</td><td class="price">828₽</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:18px; font-size:13.5px;">Оплата принимается через СБП или криптовалютой — выбор способа доступен прямо в боте при оформлении.</p>
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <div class="cta-band">
+          <h2>Выбрал тариф?</h2>
+          <p>Оформление и оплата занимают пару минут прямо в Telegram.</p>
+          <div class="hero-actions">
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-primary">Открыть бота</a>
+            <a data-view="faq" class="btn btn-secondary">Вопросы по оплате</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== SETUP ===================== -->
+  <div class="view" id="view-setup">
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Подключение</span>
+        <h1>Настройка занимает 2–3 минуты</h1>
+        <p>После оплаты бот присылает конфигурацию для WireGuard или AmneziaWG — в виде файла и QR-кода. Выбери свою систему и следуй шагам.</p>
+      </div>
+    </section>
+    <section style="padding-top:8px;">
+      <div class="container">
+        <div class="callout"><strong>Какой протокол выбрать?</strong> Если обычный VPN на твоей сети уже блокируется (характерно для домашнего Wi-Fi в РФ) — выбирай <strong>AmneziaWG</strong>, он маскирует трафик под обычное соединение. Если ограничений нет — хватит обычного <strong>WireGuard</strong>, он немного быстрее.</div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tab-windows">Windows</button>
+          <button class="tab-btn" data-tab="tab-android">Android</button>
+          <button class="tab-btn" data-tab="tab-ios">iOS</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-windows">
+          <div class="setup-step"><div class="num">1</div><div><h4>Установи клиент</h4><p>Скачай официальное приложение <strong>WireGuard</strong> (wireguard.com/install) или <strong>AmneziaWG</strong> с GitHub-релизов проекта.</p></div></div>
+          <div class="setup-step"><div class="num">2</div><div><h4>Получи конфиг в боте</h4><p>После оплаты бот пришлёт файл <code>.conf</code> — сохрани его на компьютер.</p></div></div>
+          <div class="setup-step"><div class="num">3</div><div><h4>Импортируй туннель</h4><p>В приложении нажми «Импорт туннеля из файла» и выбери полученный <code>.conf</code>.</p></div></div>
+          <div class="setup-step"><div class="num">4</div><div><h4>Активируй соединение</h4><p>Переключи тумблер в положение «включено» — трафик пойдёт через INCX.</p></div></div>
+        </div>
+
+        <div class="tab-panel" id="tab-android">
+          <div class="setup-step"><div class="num">1</div><div><h4>Установи приложение</h4><p>Загрузи <strong>WireGuard</strong> или <strong>AmneziaWG</strong> из Google Play (или APK с GitHub, если Play недоступен).</p></div></div>
+          <div class="setup-step"><div class="num">2</div><div><h4>Получи QR-код в боте</h4><p>После оплаты бот пришлёт QR-код конфигурации прямо в чат.</p></div></div>
+          <div class="setup-step"><div class="num">3</div><div><h4>Отсканируй код</h4><p>В приложении нажми «+» → «Сканировать QR-код» и наведи камеру на изображение из бота.</p></div></div>
+          <div class="setup-step"><div class="num">4</div><div><h4>Подключись</h4><p>Тапни по созданному туннелю — появится статус активного VPN-подключения.</p></div></div>
+        </div>
+
+        <div class="tab-panel" id="tab-ios">
+          <div class="setup-step"><div class="num">1</div><div><h4>Установи приложение</h4><p>Загрузи <strong>WireGuard</strong> или <strong>AmneziaWG</strong> из App Store.</p></div></div>
+          <div class="setup-step"><div class="num">2</div><div><h4>Получи QR-код в боте</h4><p>После оплаты бот пришлёт QR-код — открой его на втором устройстве или экспортируй на этот же телефон.</p></div></div>
+          <div class="setup-step"><div class="num">3</div><div><h4>Добавь туннель</h4><p>В приложении нажми «+» → «Создать из QR-кода» и отсканируй изображение.</p></div></div>
+          <div class="setup-step"><div class="num">4</div><div><h4>Разреши VPN-конфигурацию</h4><p>Подтверди системный запрос на добавление VPN-конфигурации, затем включи переключатель.</p></div></div>
+        </div>
+
+        <div class="callout">Нужны скриншоты и видео по каждому шагу? В Telegram-канале есть пошаговая инструкция с картинками: <a href="https://t.me/+qDwr8D4vJrFlNGNi" target="_blank" rel="noopener">открыть инструкцию →</a></div>
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <div class="cta-band">
+          <h2>Не получилось подключиться?</h2>
+          <p>Напиши в поддержку — разберёмся быстро.</p>
+          <div class="hero-actions">
+            <a href="https://t.me/qlthub" class="btn btn-primary">Написать в поддержку</a>
+            <a data-view="faq" class="btn btn-secondary">Смотреть FAQ</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== FAQ ===================== -->
+  <div class="view" id="view-faq">
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">FAQ</span>
+        <h1>Частые вопросы</h1>
+        <p>Если ответа здесь нет — поддержка отвечает быстро в Telegram.</p>
+      </div>
+    </section>
+    <section style="padding-top:8px;">
+      <div class="container" style="max-width:760px;">
+
+        <div class="faq-item open">
+          <div class="faq-q"><h3>В чём разница между WireGuard и AmneziaWG?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Это один и тот же быстрый протокол, но AmneziaWG дополнительно маскирует трафик, чтобы он не определялся системами блокировки как VPN. Используй AmneziaWG, если обычный WireGuard у тебя не подключается.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Вы храните логи?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Нет. История подключений и посещённых адресов не сохраняется.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Как оплатить тариф?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Прямо в Telegram-боте: выбираешь тариф и платишь через СБП или криптовалюту. Конфиг приходит в чат сразу после подтверждения платежа.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Сколько устройств можно подключить на одном тарифе?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Зависит от текущих условий тарифа — точное число уточни у поддержки перед покупкой, если планируешь подключать несколько устройств одновременно.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>VPN не подключается дома — что делать?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Скорее всего провайдер блокирует протокол по сигнатуре. Попробуй переключиться на конфиг AmneziaWG. Если не помогло, напиши в поддержку.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Что входит в пакет «200 ГБ» за 50₽?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Это месячный тариф с ограничением трафика 200 ГБ — выгоднее для тех, кто не смотрит видео в высоком качестве часами. Для безлимита есть тариф за 70₽.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Можно вернуть деньги, если не подошло?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>Напиши в поддержку с описанием проблемы — решаем такие ситуации индивидуально.</p></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q"><h3>Где найти подробную инструкцию по установке?</h3><span class="faq-toggle">+</span></div>
+          <div class="faq-a"><p>В разделе <a data-view="setup">«Подключение»</a> — пошагово для Windows, Android и iOS, плюс ссылка на Telegram-канал с инструкцией в картинках.</p></div>
+        </div>
+
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <div class="cta-band">
+          <h2>Остались вопросы?</h2>
+          <p>Поддержка на связи в Telegram.</p>
+          <div class="hero-actions">
+            <a href="https://t.me/qlthub" class="btn btn-primary">Написать в поддержку</a>
+            <a href="https://t.me/brawlcodeid_bot" class="btn btn-secondary">Открыть бота</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="logo" data-view="home"><span class="dot"></span>INCX</div>
+      <div class="footer-links">
+        <a data-view="pricing">Тарифы</a>
+        <a data-view="setup">Подключение</a>
+        <a data-view="faq">FAQ</a>
+        <a href="https://t.me/qlthub">Поддержка</a>
+      </div>
+      <div class="footer-note">© 2026 INCX</div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ---------- view router (SPA без перезагрузки, без History API —
+   чтобы не падать в песочнице превью) ---------- */
+(function () {
+  const views = document.querySelectorAll(".view");
+  const navLinks = document.querySelectorAll("[data-view]");
+
+  function showView(name) {
+    if (!document.getElementById("view-" + name)) name = "home";
+    views.forEach((v) => v.classList.remove("active"));
+    document.getElementById("view-" + name).classList.add("active");
+    navLinks.forEach((l) => {
+      if (l.closest("nav")) l.classList.toggle("active", l.dataset.view === name);
+    });
+    document.querySelector("main").scrollIntoView({ block: "start" });
+    const menu = document.querySelector("nav.main-nav");
+    if (menu) menu.classList.remove("open");
+  }
+
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      showView(link.dataset.view);
+    });
+  });
+
+  showView("home");
+})();
+
+/* ---------- ambient starfield ---------- */
+(function starfield() {
+  const canvas = document.getElementById("starfield");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let stars = [], w, h;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    const count = Math.min(160, Math.floor((w * h) / 9000));
+    stars = Array.from({ length: count }, () => ({ x: Math.random()*w, y: Math.random()*h, r: Math.random()*1.1+0.3, o: Math.random()*0.5+0.25, speed: Math.random()*0.015+0.004, phase: Math.random()*Math.PI*2 }));
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    for (const s of stars) {
+      const twinkle = reduced ? s.o : s.o + Math.sin(t*s.speed + s.phase)*0.18;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(220,224,245,${Math.max(0.08, twinkle)})`; ctx.fill();
+    }
+    if (!reduced) requestAnimationFrame(draw);
+  }
+  resize(); window.addEventListener("resize", resize); draw(0);
+})();
+
+/* ---------- hero route animation ---------- */
+(function routeCanvas() {
+  const canvas = document.getElementById("route-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const wrap = canvas.parentElement;
+  let w, h, nodes, animStart;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function resize() { w = canvas.width = wrap.clientWidth; h = canvas.height = wrap.clientHeight; buildPath(); }
+  function buildPath() {
+    const count = 6; nodes = [];
+    for (let i = 0; i < count; i++) {
+      const x = (w/(count-1))*i;
+      const jitter = (Math.sin(i*1.7)*0.5+0.5);
+      const y = h*0.25 + jitter*h*0.5;
+      nodes.push({ x, y });
+    }
+    window._bgStars = Array.from({ length: 60 }, () => ({ x: Math.random()*w, y: Math.random()*h, r: Math.random()*1+0.3, o: Math.random()*0.35+0.08 }));
+  }
+  function draw(ts) {
+    if (!animStart) animStart = ts;
+    const elapsed = ts - animStart;
+    const progress = reduced ? 1 : Math.min(1, elapsed/2200);
+    ctx.clearRect(0, 0, w, h);
+    for (const s of window._bgStars) { ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fillStyle = `rgba(200,205,235,${s.o})`; ctx.fill(); }
+    const totalSegs = nodes.length - 1;
+    const segProgress = progress*totalSegs;
+    ctx.lineWidth = 1.6; ctx.strokeStyle = "rgba(130,119,245,0.85)"; ctx.shadowColor = "rgba(130,119,245,0.6)"; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.moveTo(nodes[0].x, nodes[0].y);
+    for (let i = 0; i < totalSegs; i++) {
+      const segT = Math.max(0, Math.min(1, segProgress - i));
+      const a = nodes[i], b = nodes[i+1];
+      const x = a.x + (b.x-a.x)*segT, y = a.y + (b.y-a.y)*segT;
+      ctx.lineTo(x, y);
+      if (segT < 1) break;
+    }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    nodes.forEach((n, i) => {
+      const reached = i <= segProgress;
+      ctx.beginPath(); ctx.arc(n.x, n.y, reached?3.4:2.2, 0, Math.PI*2);
+      ctx.fillStyle = reached ? "#8277f5" : "rgba(163,168,200,0.35)"; ctx.fill();
+      if (reached) { ctx.beginPath(); ctx.arc(n.x, n.y, 7, 0, Math.PI*2); ctx.strokeStyle = "rgba(130,119,245,0.35)"; ctx.lineWidth = 1; ctx.stroke(); }
+    });
+    if (progress < 1) requestAnimationFrame(draw);
+    else if (!reduced) idlePulse();
+  }
+  let pulseT = 0;
+  function idlePulse() {
+    pulseT += 0.04;
+    const last = nodes[nodes.length-1];
+    ctx.beginPath(); ctx.arc(last.x, last.y, 7+Math.sin(pulseT)*2.5, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(130,119,245,${0.25+Math.sin(pulseT)*0.1})`; ctx.lineWidth = 1; ctx.stroke();
+    requestAnimationFrame(idlePulse);
+  }
+  resize(); window.addEventListener("resize", resize); requestAnimationFrame(draw);
+})();
+
+/* ---------- mobile nav toggle ---------- */
+(function nav() {
+  const toggle = document.querySelector(".menu-toggle");
+  const menu = document.querySelector("nav.main-nav");
+  if (!toggle || !menu) return;
+  toggle.addEventListener("click", () => menu.classList.toggle("open"));
+})();
+
+/* ---------- FAQ accordion ---------- */
+(function faq() {
+  const items = document.querySelectorAll(".faq-item");
+  items.forEach((item) => {
+    const q = item.querySelector(".faq-q");
+    if (!q) return;
+    q.addEventListener("click", () => {
+      const isOpen = item.classList.contains("open");
+      items.forEach((i) => i.classList.remove("open"));
+      if (!isOpen) item.classList.add("open");
+    });
+  });
+})();
+
+/* ---------- setup page tabs ---------- */
+(function tabs() {
+  const buttons = document.querySelectorAll(".tab-btn");
+  if (!buttons.length) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(target).classList.add("active");
+    });
+  });
+})();
+</script>
+</body>
+</html>
